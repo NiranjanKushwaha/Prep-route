@@ -192,19 +192,34 @@ pages stay simple.
 safe fallback, so promoting the app between staging and production is a build-mode change rather
 than a code change.
 
-## Deployment
+## Deployment (Netlify)
 
-`npm run build` produces a Nitro server bundle in `.output`, defaulting to the
-`cloudflare-module` preset. Nitro auto-detects most hosts, so the same build works on Cloudflare,
-Vercel or Netlify.
+This app is configured for **Netlify + TanStack Start SSR** via
+`@netlify/vite-plugin-tanstack-start`. That means deep links and browser refresh
+(`/dashboard`, `/tests/:id/preview`, …) are served by Netlify functions — you will
+**not** get a Netlify 404 on refresh.
+
+### One-time Netlify setup
+
+1. Push this repo to GitHub / GitLab / Bitbucket.
+2. In [Netlify](https://app.netlify.com) → **Add new project** → **Import an existing project**.
+3. Build settings are already in `netlify.toml`:
+   - **Build command:** `npm run build`
+   - **Publish directory:** `dist/client`
+   - **Node version:** `22` (also in `.nvmrc`)
+4. (Optional) Site settings → Environment variables → add:
+   - `VITE_API_BASE_URL` = your API base (defaults to staging from `.env.production`)
+5. Deploy. After the first deploy, open any nested URL and hard-refresh to confirm
+   routing works.
+
+### CLI deploy
 
 ```sh
 npm run build
-npm run preview   # verify locally first
+npx netlify deploy --prod
 ```
 
-Set `VITE_API_BASE_URL` in the host's environment settings if it should differ from
-`.env.production`.
+Requires [Netlify CLI](https://docs.netlify.com/cli/get-started/) ≥ 17.31.
 
 ---
 

@@ -14,6 +14,7 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+.netlify
 *.local
 
 # Local env overrides — `.env.staging` / `.env.production` are committed on purpose,

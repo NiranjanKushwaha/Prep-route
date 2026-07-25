@@ -2,9 +2,9 @@ import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { nitro } from "nitro/vite";
+import netlify from "@netlify/vite-plugin-tanstack-start";
 
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   server: {
     host: "::",
     port: 8080,
@@ -40,7 +40,8 @@ export default defineConfig(({ command }) => ({
         client: { files: ["**/server/**"], specifiers: ["server-only"] },
       },
     }),
-    ...(command === "build" ? [nitro({ defaultPreset: "cloudflare-module" })] : []),
+    // Official Netlify adapter — SSR + serverless routing so deep links / refresh never 404.
+    netlify(),
     viteReact(),
   ],
-}));
+});
