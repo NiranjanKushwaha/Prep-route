@@ -141,7 +141,7 @@ export function TestForm({
                   onClick={() => field.onChange(t.value)}
                   className={`px-5 py-2 text-sm rounded-full transition-colors ${
                     field.value === t.value
-                      ? "bg-primary/10 text-primary border border-primary/40 font-semibold shadow-sm"
+                      ? "bg-accent text-accent-foreground border border-primary/30 font-semibold shadow-sm"
                       : "border border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >

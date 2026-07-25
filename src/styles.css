@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * PrepRoute design tokens — tuned to the Figma assignment palette.
- * Soft brand blue (~#5B8DEF) with slate neutrals. Light + dark both supported.
+ * PrepRoute design tokens — exact hex from Figma assignment screenshots.
+ * Primary CTA: #7489FF | Logo mark: #1B5DEF | Easy/success: #2AB6AB
  */
 
 @theme inline {
@@ -58,87 +58,91 @@
 
 :root {
   --radius: 0.5rem;
+  /* Official logo fills */
   --logo-ink: #000a3a;
   --logo-brand: #1b5def;
-  /* Page canvas — Figma soft slate-blue grey */
-  --background: oklch(0.97 0.008 250);
-  --foreground: oklch(0.28 0.03 255);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.28 0.03 255);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.28 0.03 255);
-  /* Brand blue ≈ #5B8DEF */
-  --primary: oklch(0.66 0.14 255);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.94 0.03 255);
-  --secondary-foreground: oklch(0.45 0.1 255);
-  --muted: oklch(0.955 0.01 250);
-  --muted-foreground: oklch(0.55 0.02 255);
-  --accent: oklch(0.94 0.04 255);
-  --accent-foreground: oklch(0.4 0.12 255);
-  --destructive: oklch(0.58 0.22 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.72 0.14 160);
-  --success-foreground: oklch(0.3 0.06 160);
-  --warning: oklch(0.84 0.14 85);
-  --warning-foreground: oklch(0.4 0.08 75);
-  --border: oklch(0.9 0.015 250);
-  --input: oklch(0.9 0.015 250);
-  --ring: oklch(0.66 0.14 255);
-  --chart-1: oklch(0.66 0.14 255);
-  --chart-2: oklch(0.72 0.14 160);
-  --chart-3: oklch(0.84 0.14 85);
-  --chart-4: oklch(0.6 0.12 300);
-  --chart-5: oklch(0.7 0.15 30);
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.4 0.02 255);
-  --sidebar-primary: oklch(0.66 0.14 255);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.94 0.04 255);
-  --sidebar-accent-foreground: oklch(0.45 0.12 255);
-  --sidebar-border: oklch(0.92 0.012 250);
-  --sidebar-ring: oklch(0.66 0.14 255);
+  /* Canvas + surfaces (Figma) */
+  --background: #f4f5f7;
+  --foreground: #181818;
+  --card: #ffffff;
+  --card-foreground: #181818;
+  --popover: #ffffff;
+  --popover-foreground: #181818;
+  /* Figma primary CTA blue */
+  --primary: #7489ff;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eeff;
+  --secondary-foreground: #4a5fd4;
+  --muted: #f0f1f4;
+  --muted-foreground: #888888;
+  /* Active nav / soft blue wash */
+  --accent: #e0e8fc;
+  --accent-foreground: #4a5fd4;
+  --destructive: #e5484d;
+  --destructive-foreground: #ffffff;
+  /* Easy badge teal */
+  --success: #2ab6ab;
+  --success-foreground: #0d6b64;
+  /* Medium badge amber */
+  --warning: #f0c060;
+  --warning-foreground: #7a5a10;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #7489ff;
+  --chart-1: #7489ff;
+  --chart-2: #2ab6ab;
+  --chart-3: #f0c060;
+  --chart-4: #8b7cf6;
+  --chart-5: #f07654;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #6b7280;
+  --sidebar-primary: #7489ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e0e8fc;
+  --sidebar-accent-foreground: #4a5fd4;
+  --sidebar-border: #eceef2;
+  --sidebar-ring: #7489ff;
 }
 
 .dark {
   --logo-ink: #f8fafc;
-  --logo-brand: #5b8def;
-  --background: oklch(0.17 0.02 255);
-  --foreground: oklch(0.97 0.005 255);
-  --card: oklch(0.22 0.025 255);
-  --card-foreground: oklch(0.97 0.005 255);
-  --popover: oklch(0.22 0.025 255);
-  --popover-foreground: oklch(0.97 0.005 255);
-  --primary: oklch(0.72 0.13 255);
-  --primary-foreground: oklch(0.18 0.03 255);
-  --secondary: oklch(0.28 0.04 255);
-  --secondary-foreground: oklch(0.9 0.02 255);
-  --muted: oklch(0.26 0.03 255);
-  --muted-foreground: oklch(0.72 0.02 255);
-  --accent: oklch(0.3 0.05 255);
-  --accent-foreground: oklch(0.92 0.03 255);
-  --destructive: oklch(0.65 0.2 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.7 0.14 160);
-  --success-foreground: oklch(0.95 0.02 160);
-  --warning: oklch(0.78 0.12 85);
-  --warning-foreground: oklch(0.2 0.04 75);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.72 0.13 255);
-  --chart-1: oklch(0.72 0.13 255);
-  --chart-2: oklch(0.7 0.14 160);
-  --chart-3: oklch(0.78 0.12 85);
-  --chart-4: oklch(0.65 0.14 300);
-  --chart-5: oklch(0.7 0.15 30);
-  --sidebar: oklch(0.2 0.025 255);
-  --sidebar-foreground: oklch(0.9 0.01 255);
-  --sidebar-primary: oklch(0.72 0.13 255);
-  --sidebar-primary-foreground: oklch(0.18 0.03 255);
-  --sidebar-accent: oklch(0.3 0.05 255);
-  --sidebar-accent-foreground: oklch(0.92 0.03 255);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.72 0.13 255);
+  --logo-brand: #7489ff;
+  --background: #12141c;
+  --foreground: #f4f5f7;
+  --card: #1a1d28;
+  --card-foreground: #f4f5f7;
+  --popover: #1a1d28;
+  --popover-foreground: #f4f5f7;
+  --primary: #7489ff;
+  --primary-foreground: #ffffff;
+  --secondary: #2a3148;
+  --secondary-foreground: #c5ceff;
+  --muted: #222636;
+  --muted-foreground: #9ca3af;
+  --accent: #2a3148;
+  --accent-foreground: #c5ceff;
+  --destructive: #f07178;
+  --destructive-foreground: #ffffff;
+  --success: #2ab6ab;
+  --success-foreground: #a8ebe4;
+  --warning: #f0c060;
+  --warning-foreground: #1a1408;
+  --border: rgb(255 255 255 / 12%);
+  --input: rgb(255 255 255 / 14%);
+  --ring: #7489ff;
+  --chart-1: #7489ff;
+  --chart-2: #2ab6ab;
+  --chart-3: #f0c060;
+  --chart-4: #8b7cf6;
+  --chart-5: #f07654;
+  --sidebar: #161922;
+  --sidebar-foreground: #c4c9d4;
+  --sidebar-primary: #7489ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2a3148;
+  --sidebar-accent-foreground: #c5ceff;
+  --sidebar-border: rgb(255 255 255 / 10%);
+  --sidebar-ring: #7489ff;
 }
 
 @layer base {
