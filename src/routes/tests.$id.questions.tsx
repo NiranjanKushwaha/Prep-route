@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Pencil, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
+import { QuestionSidebar } from "@/components/layout/QuestionSidebar";
 import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,10 +55,41 @@ const schema = z.object({
 
 type Form = z.infer<typeof schema>;
 
+function editableQuestion(q: Question): Question {
+  return {
+    ...(q.id ? { id: q.id } : {}),
+    type: "mcq",
+    question: typeof q.question === "string" ? q.question : "",
+    option1: typeof q.option1 === "string" ? q.option1 : "",
+    option2: typeof q.option2 === "string" ? q.option2 : "",
+    option3: typeof q.option3 === "string" ? q.option3 : "",
+    option4: typeof q.option4 === "string" ? q.option4 : "",
+    correct_option:
+      typeof q.correct_option === "string" ? q.correct_option : "option1",
+    explanation: typeof q.explanation === "string" ? q.explanation : "",
+    difficulty: typeof q.difficulty === "string" ? q.difficulty : "",
+    media_url: typeof q.media_url === "string" ? q.media_url : "",
+  };
+}
+
+function isQuestionComplete(q: Question): boolean {
+  return schema.safeParse(q).success;
+}
+
 function subjectLabel(t?: Test): string {
   if (!t) return "";
   if (typeof t.subject === "string") return t.subject_name || t.subject;
   if (t.subject && typeof t.subject === "object") return t.subject.name;
+  return "";
+}
+
+function firstNamed(value: unknown): string {
+  if (!Array.isArray(value) || value.length === 0) return "";
+  const first = value[0];
+  if (typeof first === "string") return first;
+  if (first && typeof first === "object" && "name" in first) {
+    return String((first as { name?: string }).name ?? "");
+  }
   return "";
 }
 
@@ -72,6 +104,17 @@ function QuestionsPage() {
 
   const [drafts, setDrafts] = useState<Question[]>([]);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [seeded, setSeeded] = useState(false);
+
+  // Load questions already saved on this test so they can be edited.
+  const savedIds = (testQuery.data?.questions ?? []).filter(
+    (q): q is string => typeof q === "string",
+  );
+  const savedQuery = useQuery({
+    queryKey: ["questions", savedIds],
+    queryFn: () => questionService.fetchBulk(savedIds).then((r) => r.data),
+    enabled: savedIds.length > 0,
+  });
 
   const defaults: Form = {
     question: "",
@@ -93,33 +136,101 @@ function QuestionsPage() {
     formState: { errors },
   } = useForm<Form>({ resolver: zodResolver(schema), defaultValues: defaults });
 
+  const fillForm = (q: Question) => {
+    reset({
+      question: q.question ?? "",
+      option1: q.option1 ?? "",
+      option2: q.option2 ?? "",
+      option3: q.option3 ?? "",
+      option4: q.option4 ?? "",
+      correct_option: (q.correct_option as Form["correct_option"]) || "option1",
+      explanation: q.explanation ?? "",
+      difficulty: q.difficulty ?? "",
+      media_url: q.media_url ?? "",
+    });
+  };
+
+  // Seed drafts from saved questions and open the first one in the form.
   useEffect(() => {
-    if (editingIdx !== null && drafts[editingIdx]) {
-      const q = drafts[editingIdx];
-      reset({
+    if (seeded) return;
+    if (savedIds.length === 0 && testQuery.isSuccess) {
+      setSeeded(true);
+      return;
+    }
+    if (!savedQuery.data) return;
+
+    const loaded = savedQuery.data.map(editableQuestion);
+    setDrafts(loaded);
+    setSeeded(true);
+    if (loaded.length > 0) {
+      setEditingIdx(0);
+      fillForm(loaded[0]);
+    }
+    // fillForm/reset intentionally omitted — only seed once per visit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seeded, savedIds.length, savedQuery.data, testQuery.isSuccess]);
+
+  useEffect(() => {
+    if (editingIdx === null) return;
+    const q = drafts[editingIdx];
+    if (q) fillForm(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingIdx]);
+
+  const test = testQuery.data;
+
+  const saveMut = useMutation({
+    mutationFn: async (final: Question[]) => {
+      // Backend requires subject on each question. GET /tests returns names for
+      // subject/topics/sub_topics, and POST /questions/bulk expects those names
+      // (topic UUIDs 404).
+      const subject = subjectLabel(test);
+      if (!subject) throw new Error("Test subject is missing; cannot save questions.");
+      const topic = firstNamed(test?.topics);
+      const subTopic = firstNamed(test?.sub_topics);
+
+      // Whitelist writable fields. Fetched questions also contain nullable and
+      // read-only fields that the update validator rejects when echoed back.
+      const enrich = (q: Question): Question => ({
+        type: "mcq",
         question: q.question,
         option1: q.option1,
         option2: q.option2,
         option3: q.option3,
         option4: q.option4,
-        correct_option: q.correct_option as Form["correct_option"],
-        explanation: q.explanation ?? "",
-        difficulty: q.difficulty ?? "",
-        media_url: q.media_url ?? "",
+        correct_option: q.correct_option,
+        ...(q.explanation ? { explanation: q.explanation } : {}),
+        ...(q.difficulty ? { difficulty: q.difficulty } : {}),
+        ...(q.media_url ? { media_url: q.media_url } : {}),
+        test_id: id,
+        subject,
+        ...(topic ? { topic } : {}),
+        ...(subTopic ? { sub_topic: subTopic } : {}),
       });
-    }
-  }, [editingIdx, drafts, reset]);
 
-  const saveMut = useMutation({
-    mutationFn: async (final: Question[]) => {
-      const payload = final.map((q) => ({ ...q, type: "mcq", test_id: id }));
-      const res = await questionService.bulkCreate(payload);
-      const ids = res.data.map((q) => q.id!).filter(Boolean);
+      // Existing questions (have an id) are updated in place; new ones are bulk-created.
+      const updates = final.filter((q) => q.id);
+      const creations = final.filter((q) => !q.id);
+
+      await Promise.all(updates.map((q) => questionService.update(q.id!, enrich(q))));
+
+      let createdIds: string[] = [];
+      if (creations.length > 0) {
+        const res = await questionService.bulkCreate(creations.map(enrich));
+        createdIds = res.data.map((q) => q.id!).filter(Boolean);
+      }
+
+      // Preserve draft order: existing ids in place, created ids fill the gaps in order.
+      let createdCursor = 0;
+      const ids = final
+        .map((q) => q.id ?? createdIds[createdCursor++])
+        .filter((v): v is string => Boolean(v));
+
       await testService.update(id, {
         questions: ids,
         total_questions: ids.length,
       });
-      return res.data;
+      return ids;
     },
     onSuccess: () => {
       toast.success("Questions saved");
@@ -128,26 +239,94 @@ function QuestionsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const onSubmit = handleSubmit((values) => {
-    const q: Question = { ...values, type: "mcq" };
-    setDrafts((prev) => {
-      if (editingIdx !== null) {
-        const copy = [...prev];
-        copy[editingIdx] = q;
-        return copy;
+  const removeDraft = async (idx: number) => {
+    const target = drafts[idx];
+    if (target?.id) {
+      try {
+        await questionService.remove(target.id);
+        const remaining = savedIds.filter((qid) => qid !== target.id);
+        await testService.update(id, {
+          questions: remaining,
+          total_questions: Math.max(remaining.length, 0),
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to delete question");
+        return;
       }
-      return [...prev, q];
-    });
+    }
+    setDrafts((prev) => prev.filter((_, i) => i !== idx));
+    if (editingIdx === idx) {
+      setEditingIdx(null);
+      reset(defaults);
+    }
+  };
+
+  const mergeFormValues = (values: Form): Question[] => {
+    const next = [...drafts];
+    const question = { ...values, type: "mcq" };
+    if (editingIdx !== null) {
+      next[editingIdx] = { ...next[editingIdx], ...question };
+    } else {
+      next.push(question);
+    }
+    return next;
+  };
+
+  const onSubmit = handleSubmit((values) => {
+    setDrafts(mergeFormValues(values));
     setEditingIdx(null);
     reset(defaults);
     toast.success(editingIdx !== null ? "Question updated" : "Question added");
   });
 
-  const test = testQuery.data;
+  const addAnother = handleSubmit((values) => {
+    const completed = mergeFormValues(values);
+    const next = [...completed, { ...defaults, type: "mcq" }];
+    setDrafts(next);
+    setEditingIdx(next.length - 1);
+    reset(defaults);
+  });
+
+  const saveQuestions = (questions: Question[]) => {
+    const incompleteIndex = questions.findIndex((q) => !isQuestionComplete(q));
+    if (incompleteIndex >= 0) {
+      setEditingIdx(incompleteIndex);
+      fillForm(questions[incompleteIndex]);
+      toast.error(`Complete Question ${incompleteIndex + 1} before continuing.`);
+      return;
+    }
+    saveMut.mutate(questions);
+  };
+
+  const handleNext = () => {
+    if (editingIdx === null) {
+      saveQuestions(drafts);
+      return;
+    }
+    void handleSubmit((values) => {
+      const next = mergeFormValues(values);
+      setDrafts(next);
+      saveQuestions(next);
+    })();
+  };
+
   const totalTarget = test?.total_questions ?? 0;
+  const questionStates = drafts.map(isQuestionComplete);
+  const displayedTotal = Math.max(totalTarget, drafts.length, 1);
 
   return (
-    <AppLayout>
+    <AppLayout
+      sidebar={
+        <QuestionSidebar
+          testId={id}
+          total={displayedTotal}
+          doneCount={questionStates.filter(Boolean).length}
+          questionStates={questionStates}
+          activeIndex={editingIdx}
+          onSelect={(i) => setEditingIdx(i)}
+        />
+      }
+    >
       <Breadcrumbs
         items={[
           { label: "Test Creation", to: ROUTES.DASHBOARD },
@@ -156,7 +335,7 @@ function QuestionsPage() {
         ]}
       />
 
-      {testQuery.isLoading ? (
+      {testQuery.isLoading || (savedIds.length > 0 && !seeded) ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…
         </div>
@@ -184,79 +363,39 @@ function QuestionsPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          <div className="grid gap-6">
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold">Question creation</h3>
-                  <span className="text-xs text-muted-foreground">
-                    Total: {drafts.length}/{totalTarget || "—"}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {drafts.map((q, i) => (
-                    <button
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-semibold">
+                    Question {editingIdx !== null ? editingIdx + 1 : drafts.length + 1}
+                    <span className="text-muted-foreground">/{displayedTotal}</span>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
                       type="button"
-                      key={i}
-                      onClick={() => setEditingIdx(i)}
-                      className={`w-full flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                        editingIdx === i
-                          ? "border-success/40 bg-success/10"
-                          : "border-success/30 bg-success/5 hover:bg-success/10"
-                      }`}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => void addAnother()}
                     >
-                      <span className="flex items-center gap-2 font-medium">
-                        <CheckCircle2 className="h-4 w-4 text-success" />
-                        Question {i + 1}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDrafts((prev) => prev.filter((_, idx) => idx !== i));
-                            if (editingIdx === i) {
-                              setEditingIdx(null);
-                              reset(defaults);
-                            }
-                          }}
-                          className="text-muted-foreground hover:text-destructive p-1"
-                          aria-label="Remove"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    </button>
-                  ))}
-                  {drafts.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      No questions yet
-                    </p>
-                  )}
+                      <Plus className="h-4 w-4" /> Add Another
+                    </Button>
+                    {editingIdx !== null && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 text-destructive hover:text-destructive"
+                        onClick={() => void removeDraft(editingIdx)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full mt-4 gap-2"
-                  onClick={() => {
-                    setEditingIdx(null);
-                    reset(defaults);
-                  }}
-                >
-                  <Plus className="h-4 w-4" /> Add Another
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
                 <form onSubmit={onSubmit} className="space-y-5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">
-                      {editingIdx !== null
-                        ? `Editing Q${editingIdx + 1}`
-                        : `Question ${drafts.length + 1}`}
-                    </h3>
+                  <div className="flex justify-end">
                     <Badge variant="secondary">MCQ</Badge>
                   </div>
 
@@ -354,7 +493,7 @@ function QuestionsPage() {
                       <Button
                         type="button"
                         disabled={drafts.length === 0 || saveMut.isPending}
-                        onClick={() => saveMut.mutate(drafts)}
+                        onClick={handleNext}
                       >
                         {saveMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Next

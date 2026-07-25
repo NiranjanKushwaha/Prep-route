@@ -42,6 +42,8 @@ export type TestFormValues = z.infer<typeof schema>;
 
 export interface TestFormProps {
   initial?: Partial<TestFormValues>;
+  /** Status sent with the payload. Defaults to "draft". */
+  status?: string;
   submitLabel: string;
   onSubmit: (values: CreateTestPayload) => Promise<unknown> | void;
   submitting?: boolean;
@@ -51,6 +53,7 @@ export interface TestFormProps {
 
 export function TestForm({
   initial,
+  status = "draft",
   submitLabel,
   onSubmit,
   submitting,
@@ -122,7 +125,7 @@ export function TestForm({
   const submit = handleSubmit(async (values) => {
     await onSubmit({
       ...values,
-      status: null,
+      status,
     });
   });
 

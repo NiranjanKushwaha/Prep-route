@@ -5,15 +5,17 @@ import { CheckCircle2, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
+import { QuestionSidebar } from "@/components/layout/QuestionSidebar";
 import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { LIVE_UNTIL_OPTIONS } from "@/constants/common.constant";
 import { ROUTES } from "@/constants/routes.constant";
-import type { Test } from "@/interfaces/test.interface";
+import type { Test, UpdateTestPayload } from "@/interfaces/test.interface";
 import { questionService } from "@/services/question.service";
 import { testService } from "@/services/test.service";
 
@@ -34,11 +36,43 @@ function subjectLabel(t?: Test): string {
   return "";
 }
 
+function addDuration(from: Date, liveUntil: string): Date | null {
+  const d = new Date(from);
+  switch (liveUntil) {
+    case "1w":
+      d.setDate(d.getDate() + 7);
+      return d;
+    case "2w":
+      d.setDate(d.getDate() + 14);
+      return d;
+    case "3w":
+      d.setDate(d.getDate() + 21);
+      return d;
+    case "1m":
+      d.setMonth(d.getMonth() + 1);
+      return d;
+    default:
+      return null;
+  }
+}
+
+function combineLocalDateTime(date: string, time: string): string | null {
+  if (!date) return null;
+  const isoLocal = `${date}T${time || "00:00"}:00`;
+  const parsed = new Date(isoLocal);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
 function PreviewPage() {
   const { id } = useParams({ from: "/tests/$id/preview" });
   const navigate = useNavigate();
   const [mode, setMode] = useState<"now" | "schedule">("now");
   const [liveUntil, setLiveUntil] = useState("always");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("10:00");
+  const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState("23:59");
 
   const testQuery = useQuery({
     queryKey: ["test", id],
@@ -55,16 +89,55 @@ function PreviewPage() {
   });
 
   const publishMut = useMutation({
-    mutationFn: () => testService.publish(id),
+    mutationFn: () => {
+      const payload: UpdateTestPayload = { status: "live" };
+      let base = new Date();
+
+      if (mode === "schedule") {
+        if (!scheduleDate) throw new Error("Select a publish date.");
+        const scheduled = combineLocalDateTime(scheduleDate, scheduleTime);
+        if (!scheduled) throw new Error("Invalid publish date/time.");
+        payload.scheduled_date = scheduled;
+        base = new Date(scheduled);
+      }
+
+      if (liveUntil === "custom") {
+        const expiry = combineLocalDateTime(endDate, endTime);
+        if (!expiry) throw new Error("Select an end date for custom duration.");
+        payload.expiry_date = expiry;
+      } else if (liveUntil !== "always") {
+        const expiry = addDuration(base, liveUntil);
+        if (expiry) payload.expiry_date = expiry.toISOString();
+      }
+      // "always" / publish-now: omit scheduled_date & expiry_date entirely —
+      // the API rejects null with "must be a valid ISO 8601 date".
+
+      return testService.publish(id, payload);
+    },
     onSuccess: () => {
-      toast.success("Test published!");
+      toast.success(mode === "schedule" ? "Test scheduled!" : "Test published!");
       navigate({ to: ROUTES.DASHBOARD });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const scrollToQuestion = (i: number) => {
+    document
+      .getElementById(`preview-q-${i}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   return (
-    <AppLayout>
+    <AppLayout
+      sidebar={
+        <QuestionSidebar
+          testId={id}
+          total={questionIds.length}
+          doneCount={questionIds.length}
+          onSelect={scrollToQuestion}
+        />
+      }
+    >
       <Breadcrumbs
         items={[{ label: "Test Creation", to: ROUTES.DASHBOARD }, { label: "Preview & Publish" }]}
       />
@@ -177,6 +250,52 @@ function PreviewPage() {
                 </RadioGroup>
               </div>
 
+              {mode === "schedule" && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-date">Select Date</Label>
+                    <Input
+                      id="schedule-date"
+                      type="date"
+                      value={scheduleDate}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-time">Select Time</Label>
+                    <Input
+                      id="schedule-time"
+                      type="time"
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {liveUntil === "custom" && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="end-date">Select End Date</Label>
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end-time">Select End Time</Label>
+                    <Input
+                      id="end-time"
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
                 <Button variant="secondary" onClick={() => navigate({ to: ROUTES.DASHBOARD })}>
                   Cancel
@@ -201,7 +320,11 @@ function PreviewPage() {
               ) : (
                 <ol className="space-y-4">
                   {(questionsQuery.data ?? []).map((q, i) => (
-                    <li key={q.id ?? i} className="rounded-lg border border-border p-4">
+                    <li
+                      key={q.id ?? i}
+                      id={`preview-q-${i}`}
+                      className="scroll-mt-4 rounded-lg border border-border p-4"
+                    >
                       <p className="font-medium mb-3">
                         Q{i + 1}. {q.question}
                       </p>

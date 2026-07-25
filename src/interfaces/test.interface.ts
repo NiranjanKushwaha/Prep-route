@@ -35,7 +35,7 @@ export interface CreateTestPayload {
   total_time: number;
   total_marks: number;
   total_questions: number;
-  status?: string | null;
+  status?: string;
 }
 
 export interface UpdateTestPayload {
@@ -53,4 +53,6 @@ export interface UpdateTestPayload {
   total_questions?: number;
   questions?: string[];
   status?: string | null;
+  scheduled_date?: string | null;
+  expiry_date?: string | null;
 }

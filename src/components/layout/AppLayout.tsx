@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FilePlus2, ClipboardList, LogOut, Bell, ChevronDown } from "lucide-react";
+import { TrendingUp, SquarePen, ClipboardList, LogOut, Bell, ChevronDown } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Brand } from "@/components/common/Brand";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
@@ -33,8 +33,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: ROUTES.DASHBOARD, label: "Dashboard", icon: LayoutDashboard, match: "exact" },
-  { to: ROUTES.CREATE_TEST, label: "Test Creation", icon: FilePlus2, match: "tests" },
+  { to: ROUTES.DASHBOARD, label: "Dashboard", icon: TrendingUp, match: "exact" },
+  { to: ROUTES.CREATE_TEST, label: "Test Creation", icon: SquarePen, match: "tests" },
   { to: ROUTES.DASHBOARD, label: "Test Tracking", icon: ClipboardList, match: "none" },
 ];
 
@@ -44,7 +44,53 @@ function isActive(pathname: string, item: NavItem) {
   return false;
 }
 
-export function AppLayout({ children }: { children: ReactNode }) {
+/** Figma global sidebar: logo block + inset rounded active pill. */
+function GlobalSidebar({ pathname }: { pathname: string }) {
+  return (
+    <aside className="hidden md:flex md:w-55 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-5">
+        <Brand />
+      </div>
+      <nav className="flex-1 min-h-0 overflow-y-auto py-4 pl-0 pr-3">
+        <ul className="space-y-1.5">
+          {NAV_ITEMS.map((item, i) => {
+            const active = isActive(pathname, item);
+            const Icon = item.icon;
+            return (
+              <li key={`${item.label}-${i}`}>
+                <Link
+                  to={item.to}
+                  className={cn(
+                    "relative flex items-center gap-3 rounded-r-lg py-2.5 pl-5 pr-4 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-accent text-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {/* Figma: blue indicator bar on the sidebar's left edge for the active item */}
+                  {active && (
+                    <span className="absolute left-0 top-1/2 h-[70%] w-1 -translate-y-1/2 rounded-r-full bg-primary" />
+                  )}
+                  <Icon className={cn("h-4.5 w-4.5", active && "text-primary")} />
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </aside>
+  );
+}
+
+export function AppLayout({
+  children,
+  sidebar,
+}: {
+  children: ReactNode;
+  /** Optional custom left sidebar (e.g. the Question Creation navigator). Defaults to the global nav. */
+  sidebar?: ReactNode;
+}) {
   const { ready, isAuthenticated, user, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -77,36 +123,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-svh overflow-hidden bg-background">
-      <aside className="hidden md:flex md:w-[220px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-        <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-4">
-          <Brand />
-        </div>
-
-        <nav className="flex-1 min-h-0 overflow-y-auto py-4 pl-0 pr-3">
-          <ul className="space-y-1">
-            {NAV_ITEMS.map((item, i) => {
-              const active = isActive(pathname, item);
-              const Icon = item.icon;
-              return (
-                <li key={`${item.label}-${i}`}>
-                  <Link
-                    to={item.to}
-                    className={cn(
-                      "flex items-center gap-3 py-2.5 pl-5 pr-4 text-sm font-medium transition-colors",
-                      active
-                        ? "rounded-r-full bg-accent text-accent-foreground"
-                        : "rounded-r-full text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    <Icon className={cn("h-[18px] w-[18px]", active && "text-primary")} />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      </aside>
+      {sidebar ?? <GlobalSidebar pathname={pathname} />}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-card px-4 md:px-8">
@@ -179,7 +196,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </div>
 
       <Dialog open={signOutOpen} onOpenChange={setSignOutOpen}>
-        <DialogContent className="max-w-[380px] gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl sm:rounded-2xl [&>button]:hidden">
+        <DialogContent className="max-w-95 gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl sm:rounded-2xl [&>button]:hidden">
           <div className="relative overflow-hidden bg-linear-to-br from-accent via-card to-card px-6 pb-5 pt-7">
             <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-primary/15 blur-2xl" />
             <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-primary/10 blur-2xl" />

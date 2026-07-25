@@ -1,9 +1,12 @@
 import { API_BASE_URL, STORAGE_KEYS } from "@/constants/common.constant";
 
 export interface ApiResponse<T> {
-  success: boolean;
+  /** Some endpoints use `success`; staging uses `status: "success" | "error"`. */
+  success?: boolean;
+  status?: string;
   data: T;
   message?: string;
+  errors?: unknown;
 }
 
 export class ApiError extends Error {
@@ -38,6 +41,20 @@ function clearSession() {
 function extractMessage(body: unknown, fallback: string): string {
   if (!body || typeof body !== "object") return fallback;
   const record = body as Record<string, unknown>;
+
+  // Express-validator style: { errors: [{ msg, path }] }
+  if (Array.isArray(record.errors) && record.errors.length > 0) {
+    const parts = record.errors
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const err = item as { msg?: unknown; path?: unknown };
+        if (typeof err.msg !== "string") return null;
+        return typeof err.path === "string" && err.path ? `${err.path}: ${err.msg}` : err.msg;
+      })
+      .filter((v): v is string => !!v);
+    if (parts.length) return parts.join("; ");
+  }
+
   for (const key of ["message", "error", "detail"] as const) {
     const value = record[key];
     if (typeof value === "string" && value.trim()) return value;
@@ -97,14 +114,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new ApiError(message, res.status, body);
   }
 
-  // Some endpoints return HTTP 200 with `{ success: false, message }`.
-  if (
-    body &&
-    typeof body === "object" &&
-    "success" in body &&
-    (body as { success: unknown }).success === false
-  ) {
-    throw new ApiError(extractMessage(body, "Request failed"), res.status, body);
+  // Some endpoints return HTTP 200 with a failed business envelope.
+  if (body && typeof body === "object") {
+    const record = body as { success?: unknown; status?: unknown };
+    if (record.success === false || record.status === "error") {
+      throw new ApiError(extractMessage(body, "Request failed"), res.status, body);
+    }
   }
 
   return body as T;
