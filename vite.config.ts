@@ -39,8 +39,16 @@ export default defineConfig({
         behavior: "error",
         client: { files: ["**/server/**"], specifiers: ["server-only"] },
       },
+      // Static shell so Netlify Drop / static hosts get a real index.html.
+      // Client-side router + public/_redirects handle refresh without 404.
+      spa: {
+        enabled: true,
+        prerender: {
+          outputPath: "/index.html",
+        },
+      },
     }),
-    // Official Netlify adapter — SSR + serverless routing so deep links / refresh never 404.
+    // Official Netlify adapter for Git/CLI deploys (SSR functions when available).
     netlify(),
     viteReact(),
   ],

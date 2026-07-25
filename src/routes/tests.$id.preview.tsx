@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { QuestionSidebar } from "@/components/layout/QuestionSidebar";
 import { Breadcrumbs } from "@/components/common/Breadcrumbs";
+import { RichText } from "@/components/questions/RichText";
+import { isProbablyImageUrl } from "@/lib/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -325,9 +327,19 @@ function PreviewPage() {
                       id={`preview-q-${i}`}
                       className="scroll-mt-4 rounded-lg border border-border p-4"
                     >
-                      <p className="font-medium mb-3">
-                        Q{i + 1}. {q.question}
-                      </p>
+                      <div className="mb-3 flex gap-2">
+                        <span className="shrink-0 font-medium">Q{i + 1}.</span>
+                        <RichText html={q.question} className="font-medium" />
+                      </div>
+                      {q.media_url && isProbablyImageUrl(q.media_url) && (
+                        <div className="mb-3 overflow-hidden rounded-lg border border-border bg-muted/20 p-2">
+                          <img
+                            src={q.media_url}
+                            alt={`Question ${i + 1} media`}
+                            className="mx-auto max-h-56 rounded-md object-contain"
+                          />
+                        </div>
+                      )}
                       <ul className="grid gap-2 sm:grid-cols-2">
                         {(["option1", "option2", "option3", "option4"] as const).map((key, idx) => (
                           <li
@@ -346,9 +358,10 @@ function PreviewPage() {
                         ))}
                       </ul>
                       {q.explanation && (
-                        <p className="mt-3 text-xs text-muted-foreground">
-                          <span className="font-semibold">Explanation:</span> {q.explanation}
-                        </p>
+                        <div className="mt-3 flex flex-wrap gap-1 text-xs text-muted-foreground">
+                          <span className="font-semibold">Explanation:</span>
+                          <RichText html={q.explanation} as="span" />
+                        </div>
                       )}
                     </li>
                   ))}

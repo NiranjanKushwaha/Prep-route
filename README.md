@@ -36,8 +36,9 @@ Built as the frontend assignment for **Preproute** by **Niranjan Kushwaha**.
   actions guarded by a confirmation dialog.
 - **Test builder** with cascading Subject → Topics → Sub-topics selects, difficulty, duration
   and a full marking scheme.
-- **Question editor** for MCQs: four options, correct answer, optional explanation, difficulty
-  and media URL, with add, edit and delete on the working list.
+- **Question editor** for MCQs: formatting toolbar (bold/italic/underline/lists), image
+  upload or URL, optional explanation and difficulty, plus CSV bulk import with a downloadable
+  template. Add, edit and delete on the working list.
 - **Preview and publish** showing the whole test with the correct option highlighted.
 - **Light and dark themes**, remembered across visits.
 - **Responsive** from mobile to desktop, with loading, empty and error states on every screen.
@@ -199,24 +200,31 @@ This app is configured for **Netlify + TanStack Start SSR** via
 (`/dashboard`, `/tests/:id/preview`, …) are served by Netlify functions — you will
 **not** get a Netlify 404 on refresh.
 
-### One-time Netlify setup
+### Deploy with Netlify Drop (drag & drop)
 
-1. Push this repo to GitHub / GitLab / Bitbucket.
-2. In [Netlify](https://app.netlify.com) → **Add new project** → **Import an existing project**.
-3. Build settings are already in `netlify.toml`:
-   - **Build command:** `npm run build`
-   - **Publish directory:** `dist/client`
-   - **Node version:** `22` (also in `.nvmrc`)
-4. (Optional) Site settings → Environment variables → add:
+This app builds a **static SPA shell**. After `npm run build`:
+
+1. Open the **`dist/client`** folder (it must contain `index.html` and `_redirects`)
+2. Drag **that whole folder** onto [Netlify Drop](https://app.netlify.com/drop) or your site’s Deploys page
+3. Wait for publish, then open the site and hard-refresh `/dashboard` to confirm no 404
+
+Do **not** drag only `assets/` — drop the entire `dist/client` directory.
+
+### Preferred: Git-connected deploy
+
+1. Push this repo to GitHub
+2. Netlify → **Add new project** → import the repo  
+   Settings are already in `netlify.toml` (`npm run build`, publish `dist/client`, Node 22)
+3. (Optional) Site settings → Environment variables → add:
    - `VITE_API_BASE_URL` = your API base (defaults to staging from `.env.production`)
-5. Deploy. After the first deploy, open any nested URL and hard-refresh to confirm
+4. Deploy. After the first deploy, open any nested URL and hard-refresh to confirm
    routing works.
 
 ### CLI deploy
 
 ```sh
 npm run build
-npx netlify deploy --prod
+npx netlify deploy --prod --dir=dist/client
 ```
 
 Requires [Netlify CLI](https://docs.netlify.com/cli/get-started/) ≥ 17.31.
